@@ -55,35 +55,29 @@ func (p Piece) String() string {
 func NewBoard() Board {
 	var b Board
 
-	// Pawns
 	for i := 0; i < 8; i++ {
 		b[1][i] = Square{Pawn, White}
 		b[6][i] = Square{Pawn, Black}
 	}
 
-	// Rooks
 	b[0][0] = Square{Rook, White}
 	b[0][7] = Square{Rook, White}
 	b[7][0] = Square{Rook, Black}
 	b[7][7] = Square{Rook, Black}
 
-	// Knights
 	b[0][1] = Square{Knight, White}
 	b[0][6] = Square{Knight, White}
 	b[7][1] = Square{Knight, Black}
 	b[7][6] = Square{Knight, Black}
 
-	// Bishops
 	b[0][2] = Square{Bishop, White}
 	b[0][5] = Square{Bishop, White}
 	b[7][2] = Square{Bishop, Black}
 	b[7][5] = Square{Bishop, Black}
 
-	// Queen
 	b[0][3] = Square{Queen, White}
 	b[7][3] = Square{Queen, Black}
 
-	// King
 	b[0][4] = Square{King, White}
 	b[7][4] = Square{King, Black}
 
@@ -107,7 +101,7 @@ func printBoard(b Board) {
 func movePiece(b Board, xFrom, yFrom, xTo, yTo int) Board {
 	selected := b[xFrom][yFrom]
 
-	b[xFrom][yFrom] = Square{} // empty square
+	b[xFrom][yFrom] = Square{} 
 	b[xTo][yTo] = selected
 
 	return b
@@ -218,7 +212,18 @@ func validKingMove(b Board, fx, fy, tx, ty int) bool {
 		return false
 	}
 
-	return !sameColor(b, fx, fy, tx, ty)
+	if sameColor(b, fx, fy, tx, ty) {
+		return false
+	}
+
+	next := movePiece(b, fx, fy, tx, ty)
+
+	color := b[fx][fy].Color
+	if isKingInCheck(next, color) {
+		return false
+	}
+
+	return true
 }
 
 func validKnightMove(b Board, fx, fy, tx, ty int) bool {
@@ -256,7 +261,6 @@ func validPawnMove(b Board, fx, fy, tx, ty int) bool {
 		startRow = 6
 	}
 
-	// Forward move
 	if fy == ty && b[tx][ty].Piece == Empty {
 		if tx == fx+dir {
 			return true
@@ -266,7 +270,6 @@ func validPawnMove(b Board, fx, fy, tx, ty int) bool {
 		}
 	}
 
-	// Capture
 	if tx == fx+dir && (ty == fy+1 || ty == fy-1) {
 		return b[tx][ty].Piece != Empty &&
 			b[tx][ty].Color != pawn.Color
@@ -361,7 +364,7 @@ func markSlidingAttacks(b Board, fx, fy int, attacked *AttackMap, dirs [][2]int)
 			attacked[x][y] = true
 
 			if b[x][y].Piece != Empty {
-				break // blocked
+				break
 			}
 
 			x += d[0]
