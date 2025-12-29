@@ -323,6 +323,150 @@ func validRookMove(b Board, fx, fy, tx, ty int) bool {
 	return true
 }
 
+type AttackMap [8][8]bool
+
+func markAttacks(b Board, fx, fy int, attacked *AttackMap) {
+	switch b[fx][fy].Piece {
+	case Pawn:
+		markPawnAttacks(b, fx, fy, attacked)
+	case Knight:
+		markKnightAttacks(fx, fy, attacked)
+	case Bishop:
+		markSlidingAttacks(b, fx, fy, attacked, bishopDirs)
+	case Rook:
+		markSlidingAttacks(b, fx, fy, attacked, rookDirs)
+	case Queen:
+		markSlidingAttacks(b, fx, fy, attacked, queenDirs)
+	case King:
+		markKingAttacks(fx, fy, attacked)
+	}
+}
+
+var rookDirs = [][2]int{
+	{1, 0}, {-1, 0}, {0, 1}, {0, -1},
+}
+
+var bishopDirs = [][2]int{
+	{1, 1}, {1, -1}, {-1, 1}, {-1, -1},
+}
+
+var queenDirs = append(rookDirs, bishopDirs...)
+
+func markSlidingAttacks(b Board, fx, fy int, attacked *AttackMap, dirs [][2]int) {
+	for _, d := range dirs {
+		x := fx + d[0]
+		y := fy + d[1]
+
+		for inBounds(x, y) {
+			attacked[x][y] = true
+
+			if b[x][y].Piece != Empty {
+				break // blocked
+			}
+
+			x += d[0]
+			y += d[1]
+		}
+	}
+}
+
+var knightOffsets = [][2]int{
+	{2, 1}, {1, 2}, {-1, 2}, {-2, 1},
+	{-2, -1}, {-1, -2}, {1, -2}, {2, -1},
+}
+
+func markKnightAttacks(fx, fy int, attacked *AttackMap) {
+	for _, o := range knightOffsets {
+		x := fx + o[0]
+		y := fy + o[1]
+		if inBounds(x, y) {
+			attacked[x][y] = true
+		}
+	}
+}
+
+func markPawnAttacks(b Board, fx, fy int, attacked *AttackMap) {
+	dir := 1
+	if b[fx][fy].Color == Black {
+		dir = -1
+	}
+
+	for _, dy := range []int{-1, 1} {
+		x := fx + dir
+		y := fy + dy
+		if inBounds(x, y) {
+			attacked[x][y] = true
+		}
+	}
+}
+
+func markKingAttacks(fx, fy int, attacked *AttackMap) {
+	for dx := -1; dx <= 1; dx++ {
+		for dy := -1; dy <= 1; dy++ {
+			if dx == 0 && dy == 0 {
+				continue
+			}
+			x := fx + dx
+			y := fy + dy
+			if inBounds(x, y) {
+				attacked[x][y] = true
+			}
+		}
+	}
+}
+
+type kindLocation [8][8]Square
+
+func findKing(b Board, c Color) (int, int) {
+	for x := 0; x < 8; x++ {
+		for y := 0; y < 8; y++ {
+			if b[x][y].Piece == King && b[x][y].Color == c {
+				return x, y
+			}
+		}
+	}
+	panic("king not found")
+}
+
+func isKingInCheck(b Board, color Color) bool {
+	kx, ky := findKing(b, color)
+
+	enemy := White
+	if color == White {
+		enemy = Black
+	}
+
+	attacked := buildAttackMap(b, enemy)
+	return attacked[kx][ky]
+}
+
+func buildAttackMap(b Board, by Color) AttackMap {
+	var attacked AttackMap
+
+	for x:= 0; x < 8; x++ {
+		for y := 0; y < 8; y++ {
+			if b[x][y].Piece != Empty && b[x][y].Color == by {
+				markAttacks(b, x, y, &attacked)
+			}
+		}
+	}
+	return attacked
+}
+
+func printAttackMap(a AttackMap) {
+	for x := 0; x < 8; x++ {
+		for y := 0; y < 8; y++ {
+			if a[x][y] {
+				fmt.Print("[x]")
+			} else {
+				fmt.Print("[ ]")
+			}
+		}
+		fmt.Println()
+	}
+	fmt.Println()
+}
+
 func main() {
     b := NewBoard()
     printBoard(b)
@@ -349,5 +493,9 @@ func main() {
         }
 
         printBoard(b)
+		a0 := buildAttackMap(b, White)
+		a1 := buildAttackMap(b, Black)
+		printAttackMap(a0)
+		printAttackMap(a1)
     }
 }
